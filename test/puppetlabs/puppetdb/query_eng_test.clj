@@ -1,6 +1,7 @@
 (ns puppetlabs.puppetdb.query-eng-test
   (:require [clojure.string :as str]
             [clojure.test :refer :all]
+            [puppetlabs.puppetdb.query-eng :refer :all]
             [puppetlabs.puppetdb.query-eng.engine :refer :all]
             [puppetlabs.puppetdb.fixtures :as fixt]
             [puppetlabs.puppetdb.scf.storage-utils :as su]))
@@ -89,3 +90,21 @@
   (is (thrown-with-msg? IllegalArgumentException
                         #"'foo' is not a queryable object for resources, known queryable objects are.*"
                         (compile-user-query->sql resources-query ["=" "foo" "bar"]))))
+
+(deftest test-validate-query
+  (is (nil? (validate-query ["~" "foo" "bar"])))
+  (is (not (nil? (validate-query ["~" "foo" "*.bar"]))))
+
+  (is (nil? (validate-query ["and"
+                              ["=" ["node" "active"] "true"]
+                              ["and"
+                               ["=" "certname" "somename"]
+                               ["=" ["node" "active"] "true"]
+                               ["~" "name" "^.+.foo$"]]])))
+
+  (is (not (nil? (validate-query ["and"
+                                  ["=" ["node" "active"] "true"]
+                                  ["and"
+                                   ["=" "certname" "somename"]
+                                   ["=" ["node" "active"] "true"]
+                                   ["~" "name" "*.foo"]]])))))

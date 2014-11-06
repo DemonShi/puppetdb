@@ -17,6 +17,21 @@
             [puppetlabs.puppetdb.jdbc :as jdbc]
             [puppetlabs.puppetdb.http :as http]))
 
+(defn validate-query
+  "Validates query"
+  [parsed-query]
+  (let [[first-term & rest-terms] parsed-query]
+    (case first-term
+      ("and" "or") (some #(validate-query %) rest-terms)
+      "~" (try
+            (-> rest-terms
+              last
+              re-pattern)
+            nil
+            (catch java.util.regex.PatternSyntaxException e
+              "Invalid regexp"))
+      nil)))
+
 (defn produce-streaming-body
   "Given a query, and database connection, return a Ring response with the query
   results.
@@ -39,17 +54,20 @@
     (try
       (jdbc/with-transacted-connection db
         (let [parsed-query (json/parse-strict-string query true)
-              {[sql & params] :results-query
-               count-query :count-query} (query->sql version parsed-query
-                                                     paging-options)
-              resp (pl-http/stream-json-response
-                    (fn [f]
-                      (jdbc/with-transacted-connection db
-                        (query/streamed-query-result version sql params
-                                                     (comp f munge-fn)))))]
-          (if count-query
-            (http/add-headers resp {:count (jdbc/get-result-count count-query)})
-            resp)))
+              query-validation-error (validate-query parsed-query)]
+          (if (nil? query-validation-error)
+            (let [{[sql & params] :results-query
+                   count-query :count-query} (query->sql version parsed-query
+                                               paging-options)
+                  resp (pl-http/stream-json-response
+                         (fn [f]
+                           (jdbc/with-transacted-connection db
+                             (query/streamed-query-result version sql params
+                               (comp f munge-fn)))))]
+              (if count-query
+                (http/add-headers resp {:count (jdbc/get-result-count count-query)})
+                resp))
+            (pl-http/error-response (str "Invalid query: " query-validation-error)))))
       (catch com.fasterxml.jackson.core.JsonParseException e
         (pl-http/error-response e))
       (catch IllegalArgumentException e
