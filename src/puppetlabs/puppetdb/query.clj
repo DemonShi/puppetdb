@@ -142,7 +142,7 @@
   (when-not op
     (throw (IllegalArgumentException. (format "%s is not well-formed: queries must contain at least one operator" (vec term)))))
   (let [regexp (last args)]
-    (when (and (= op "~") (not (nil? (valid-regexp? regexp)))
+    (when (and (= op "~") (not (valid-regexp? regexp))
       (throw (IllegalArgumentException. (format "%s is not a valid regexp" regexp))))))
   (if-let [f (ops op)]
     (apply f args)
