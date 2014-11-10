@@ -70,6 +70,7 @@
             [puppetlabs.puppetdb.scf.storage-utils :refer [db-serialize sql-as-numeric sql-array-query-string sql-regexp-match sql-regexp-array-match]]
             [puppetlabs.puppetdb.jdbc :refer [valid-jdbc-query? limited-query-to-vec query-to-vec paged-sql count-sql get-result-count]]
             [puppetlabs.puppetdb.query.paging :refer [requires-paging?]]
+            [puppetlabs.puppetdb.query-eng.engine :refer [validate-binary-operators]]
             [clojure.core.match :refer [match]]))
 
 (defn execute-paged-query*
@@ -141,7 +142,9 @@
   (when-not op
     (throw (IllegalArgumentException. (format "%s is not well-formed: queries must contain at least one operator" (vec term)))))
   (if-let [f (ops op)]
-    (apply f args)
+    (do
+;      (validate-binary-operators term)
+      (apply f args))
     (throw (IllegalArgumentException. (format "%s is not well-formed: query operator '%s' is unknown" (vec term) op)))))
 
 (defn compile-boolean-operator*

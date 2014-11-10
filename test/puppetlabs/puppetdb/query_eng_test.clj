@@ -89,22 +89,25 @@
 (deftest test-valid-query-fields
   (is (thrown-with-msg? IllegalArgumentException
                         #"'foo' is not a queryable object for resources, known queryable objects are.*"
-                        (compile-user-query->sql resources-query ["=" "foo" "bar"]))))
+                        (compile-user-query->sql resources-query ["=" "foo" "bar"])))
+  (is (thrown-with-msg? IllegalArgumentException
+                        #"Invalid regexp:.*"
+                        (compile-user-query->sql resources-query ["~" "foo" "*.bar"]))))
 
-(deftest test-validate-query
-  (is (nil? (validate-query ["~" "foo" "bar"])))
-  (is (not (nil? (validate-query ["~" "foo" "*.bar"]))))
-
-  (is (nil? (validate-query ["and"
-                              ["=" ["node" "active"] "true"]
-                              ["and"
-                               ["=" "certname" "somename"]
-                               ["=" ["node" "active"] "true"]
-                               ["~" "name" "^.+.foo$"]]])))
-
-  (is (not (nil? (validate-query ["and"
-                                  ["=" ["node" "active"] "true"]
-                                  ["and"
-                                   ["=" "certname" "somename"]
-                                   ["=" ["node" "active"] "true"]
-                                   ["~" "name" "*.foo"]]])))))
+;(deftest test-validate-query
+;  (is (nil? (validate-query ["~" "foo" "bar"])))
+;  (is (not (nil? (validate-query ["~" "foo" "*.bar"]))))
+;
+;  (is (nil? (validate-query ["and"
+;                              ["=" ["node" "active"] "true"]
+;                              ["and"
+;                               ["=" "certname" "somename"]
+;                               ["=" ["node" "active"] "true"]
+;                               ["~" "name" "^.+.foo$"]]])))
+;
+;  (is (not (nil? (validate-query ["and"
+;                                  ["=" ["node" "active"] "true"]
+;                                  ["and"
+;                                   ["=" "certname" "somename"]
+;                                   ["=" ["node" "active"] "true"]
+;                                   ["~" "name" "*.foo"]]])))))

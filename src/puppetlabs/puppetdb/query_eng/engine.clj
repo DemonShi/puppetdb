@@ -524,6 +524,15 @@
   [x]
   (instance? clojure.lang.IPersistentVector x))
 
+(defn valid-regexp?
+  "Validates regexp according to Java regexp syntax"
+  [regexp-str]
+  (try
+    (re-pattern regexp-str)
+    true
+    (catch java.util.regex.PatternSyntaxException e
+      false)))
+
 (defn validate-binary-operators
   "Validation of the user provided query"
   [node]
@@ -537,10 +546,17 @@
                                          col-type))
                   (throw (IllegalArgumentException. (format "Query operators >,>=,<,<= are not allowed on field %s" field)))))
 
-              [["~>" field _]]
+              [["~>" field regexp-vec]]
               (let [col-type (get-in query-context [:project field])]
                 (when-not (contains? #{:path} col-type)
-                  (throw (IllegalArgumentException. (format "Query operator ~> is not allowed on field %s" field)))))
+                  (throw (IllegalArgumentException. (format "Query operator ~> is not allowed on field %s" field))))
+                (for [regexp regexp-vec]
+                  (when-not (or (not (string? regexp)) (valid-regexp? regexp))
+                    (throw (IllegalArgumentException. (format "Invalid regexp: %s" regexp))))))
+
+              [["~" field regexp]]
+              (when-not (valid-regexp? regexp)
+                (throw (IllegalArgumentException. (format "Invalid regexp: %s" regexp))))
 
               ;;This validation check is added to fix a failing facts
               ;;test. The facts test is checking that you can't submit
