@@ -552,7 +552,8 @@
                   (throw (IllegalArgumentException. (format "Query operator ~> is not allowed on field %s" field))))
                 (for [regexp regexp-vec]
                   (when-not (or (not (string? regexp)) (valid-regexp? regexp))
-                    (throw (IllegalArgumentException. (format "Invalid regexp: %s" regexp))))))
+                    (throw (IllegalArgumentException. (format "Invalid regexp: %s" regexp)))))
+                nil)
 
               [["~" field regexp]]
               (when-not (valid-regexp? regexp)
