@@ -249,7 +249,10 @@
                 ;; In-query for invalid fields should throw an error
                 ["in" "nothing" ["extract" "certname" ["select-resources"
                                                        ["=" "type" "Class"]]]]
-                "Can't match on unknown fact field 'nothing' for 'in'. Acceptable fields are: certname, depth, environment, name, path, type, value, value_float, value_integer")
+                "Can't match on unknown fact field 'nothing' for 'in'. Acceptable fields are: certname, depth, environment, name, path, type, value, value_float, value_integer"
+
+                ["~" "name" "*.bar"]
+                "*.bar is not a valid regexp")
 
    "/v3/facts" (omap/ordered-map
                 ;; Extract using an invalid fields should throw an error
@@ -277,7 +280,10 @@
                 ;; In-queries for invalid fields should throw an error
                 ["in" "nothing" ["extract" "certname" ["select-resources"
                                                        ["=" "type" "Class"]]]]
-                "Can't match on unknown fact field 'nothing' for 'in'. Acceptable fields are: certname, depth, environment, name, path, type, value, value_float, value_integer")))
+                "Can't match on unknown fact field 'nothing' for 'in'. Acceptable fields are: certname, depth, environment, name, path, type, value, value_float, value_integer"
+
+                ["~" "name" "*.bar"]
+                "*.bar is not a valid regexp")))
 
 (def common-well-formed-tests
   (omap/ordered-map

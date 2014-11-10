@@ -92,22 +92,15 @@
                         (compile-user-query->sql resources-query ["=" "foo" "bar"])))
   (is (thrown-with-msg? IllegalArgumentException
                         #"Invalid regexp:.*"
-                        (compile-user-query->sql resources-query ["~" "foo" "*.bar"]))))
+                        (compile-user-query->sql facts-query ["~" "name" "*.bar"])))
 
-;(deftest test-validate-query
-;  (is (nil? (validate-query ["~" "foo" "bar"])))
-;  (is (not (nil? (validate-query ["~" "foo" "*.bar"]))))
-;
-;  (is (nil? (validate-query ["and"
-;                              ["=" ["node" "active"] "true"]
-;                              ["and"
-;                               ["=" "certname" "somename"]
-;                               ["=" ["node" "active"] "true"]
-;                               ["~" "name" "^.+.foo$"]]])))
-;
-;  (is (not (nil? (validate-query ["and"
-;                                  ["=" ["node" "active"] "true"]
-;                                  ["and"
-;                                   ["=" "certname" "somename"]
-;                                   ["=" ["node" "active"] "true"]
-;                                   ["~" "name" "*.foo"]]])))))
+  (is (thrown-with-msg? IllegalArgumentException
+                        #"Invalid regexp:.*"
+                        (compile-user-query->sql
+                          facts-query
+                          ["and"
+                            ["=" ["node" "active"] "true"]
+                            ["and"
+                             ["=" "certname" "somename"]
+                             ["=" ["node" "active"] "true"]
+                             ["~" "name" "*.bar"]]]))))
