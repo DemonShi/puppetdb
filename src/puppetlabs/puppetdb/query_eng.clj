@@ -1,5 +1,6 @@
 (ns puppetlabs.puppetdb.query-eng
-  (:require [puppetlabs.puppetdb.http :as pl-http]
+  (:require [clojure.tools.logging :as log]
+            [puppetlabs.puppetdb.http :as pl-http]
             [puppetlabs.puppetdb.query.facts :as facts]
             [puppetlabs.puppetdb.query.event-counts :as event-counts]
             [puppetlabs.puppetdb.query.fact-contents :as fact-contents]
@@ -16,6 +17,23 @@
             [net.cgrand.moustache :refer [app]]
             [puppetlabs.puppetdb.jdbc :as jdbc]
             [puppetlabs.puppetdb.http :as http]))
+
+(defmacro process-psql-invalid-regexp-or-rethrow
+  [e & body]
+  `(if (= (.getSQLState ~e) "2201B")
+    (do ~@body)
+    (throw ~e)))
+
+(defmacro psql-regexp-error-handler
+  "Wraps block of code with postgres regexp error handler to catch regexp errors
+  which can't be handled because of Java and POSIX regexp syntax differences."
+  [& body]
+  `(try
+     ~@body
+     (catch org.postgresql.util.PSQLException e#
+       (process-psql-invalid-regexp-or-rethrow e#
+         (log/debug e# "Caught PSQL processing exception")
+         (log/error "Processed invalid PostgreSQL regexp. Unable to return bad request code from a different thread.")))))
 
 (defn produce-streaming-body
   "Given a query, and database connection, return a Ring response with the query
@@ -44,13 +62,21 @@
                                            paging-options)
               resp (pl-http/stream-json-response
                      (fn [f]
-                       (jdbc/with-transacted-connection db
-                         (query/streamed-query-result version sql params
-                           (comp f munge-fn)))))]
+                       ;; Note: we should wrap result query here because
+                       ;; this runs in a separate thread and we won't be
+                       ;; able to catch those exceptions in main thread
+                       (psql-regexp-error-handler
+                         (jdbc/with-transacted-connection db
+                           (query/streamed-query-result version sql params
+                             (comp f munge-fn))))))]
               (if count-query
                 (http/add-headers resp {:count (jdbc/get-result-count count-query)})
                 resp)))
       (catch com.fasterxml.jackson.core.JsonParseException e
         (pl-http/error-response e))
       (catch IllegalArgumentException e
-        (pl-http/error-response e)))))
+        (pl-http/error-response e))
+      (catch org.postgresql.util.PSQLException e
+        (process-psql-invalid-regexp-or-rethrow e
+          (log/debug e "Caught PSQL processing exception")
+          (pl-http/error-response "Invalid regexp"))))))
